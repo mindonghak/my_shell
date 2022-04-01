@@ -11,18 +11,19 @@ int parseline(char *buf, char **argv);
 int builtin_command(char **argv); 
 
 void my_mkdir(char **argv);
-
+void my_cd(char **argv);
 
 
 
 int main() 
 {
     char cmdline[MAXLINE]; /* Command line */
-
+	char my_dir[1024];
     while (1) {
 	/* Read */
-	printf("> ");                   
-	fgets(cmdline, MAXLINE, stdin); 
+	getcwd(my_dir, 1024);
+	printf("%s> ",my_dir);                   
+	fgets(cmdline, MAXLINE, stdin);
 	if (feof(stdin))
 	    exit(0);
 
@@ -46,18 +47,38 @@ void eval(char *cmdline)
     if (argv[0] == NULL)  
 	return;   /* Ignore empty lines */
     if (!builtin_command(argv)) { //quit -> exit(0), & -> ignore, other -> run
-        if (execve(argv[0], argv, environ) < 0) {	//ex) /bin/ls ls -al &
-            printf("%s: Command not found.\n", argv[0]);
-            exit(0);
-        }
+        if((pid = Fork())==0){
+/*
+		if(strcmp(argv[0],"cd")==0){
+			if(chdir(argv[1])<0){
+				printf("cd error");
+			}
+			exit(0);
+		}
+*/
+		if (execvp(argv[0], argv) < 0) {	//ex) /bin/ls ls -al &
+           	 printf("%s: Command not found.\n", argv[0]);
+           	 exit(0);
+        	}
+	}
 
 	/* Parent waits for foreground job to terminate */
-	if (!bg){ 
-	    int status;
+	if (!bg){
+		int status;
+		if(waitpid(pid, &status,0)<0){
+			unix_error("waitfg: waitpid error");
+		}
 	}
 	else//when there is backgrount process!
 	    printf("%d %s", pid, cmdline);
     }
+	else{
+		if(!strcmp(argv[0],"cd")){
+			if(chdir(argv[1]) < 0){
+				printf("cd error\n");
+			}
+		}
+	}
     return;
 }
 
@@ -69,14 +90,20 @@ int builtin_command(char **argv)
     if (!strcmp(argv[0], "&"))    /* Ignore singleton & */
 	return 1;
 
+	if(!strcmp(argv[0], "cd"))
+		return 1;
+/*
 	if(!strcmp(argv[0], "mkdir")){
 		my_mkdir(argv);
 	}
-
-
+	if(!strcmp(argv[0], "cd")){
+		my_cd(argv);
+	}
+*/
     return 0;                     /* Not a builtin command */
 }
 /* $end eval */
+/*
 void my_mkdir(char **argv){
 	char *dirname = argv[1];
 	int ret = mkdir(dirname,S_IRWXU);
@@ -96,6 +123,13 @@ void my_mkdir(char **argv){
 	exit(EXIT_SUCCESS);
 }
 
+void my_cd(char **argv){
+	if(chdir(argv[1])!=0){
+		perror("cd");
+	return;
+	}
+}
+*/
 
 
 /* $begin parseline */
