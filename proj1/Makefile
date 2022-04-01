@@ -2,11 +2,11 @@ CC = gcc
 CFLAGS = -Og
 LDLIBS = -lpthread
 
-PROGS = shellex
+PROGS = my_shell
 
 all: $(PROGS)
 
-shellex: shellex.c csapp.c
+my_shell: my_shell.c csapp.c
 
 clean:
 	rm -rf *~ $(PROGS)
