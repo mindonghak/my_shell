@@ -67,8 +67,10 @@ void eval(char *cmdline)
 		if (!builtin_command(argvlist[0])) { //quit -> exit(0), & -> ignore, other -> run
 //printf("here?\n");
 			if((pid[0] = Fork())==0){
+				char *bin = "/usr/bin/";
 				if (execvp(argvlist[0][0], argvlist[0]) < 0) {	//ex) /bin/ls ls -al &
-        	   		 printf("%s: Command not found.\n", argvlist[0][0]);
+//        	   		if(execve(strcat(bin,argvlist[0][0]), argvlist[0],environ)){ 
+				printf("%s: Command not found.\n", argvlist[0][0]);
         	   		 exit(0);
         			}
 			}
@@ -183,6 +185,8 @@ void parseline(char *buf, char **argv, char *argvlist[128][MAXARGS], int *num, i
 	char temp[MAXLINE];
 	char *tp;
 	int itp;
+	int apo = 0;
+
     buf[strlen(buf)-1] = ' ';  /* Replace trailing '\n' with space */
     while (*buf && (*buf == ' ')) /* Ignore leading spaces */
 	buf++;
@@ -190,6 +194,14 @@ void parseline(char *buf, char **argv, char *argvlist[128][MAXARGS], int *num, i
     /* Build the argv list */
     argc = 0;
     while ((delim = strchr(buf, ' '))) {
+	if(*buf == '\''){
+		buf++;
+		apo = 1;
+	}
+	else if(*buf == '\"'){
+		buf++;
+		apo = 2;
+	}
 	tp = buf;
 	itp=0;
 	while(tp!=delim){
@@ -214,11 +226,25 @@ void parseline(char *buf, char **argv, char *argvlist[128][MAXARGS], int *num, i
 		argvlist[*num][argc] = NULL;
 		(*num)++;			// next argv
 		argc = 0;		// new number of args
+		if(apo){
+			*(pipe-1) = '\0';
+			apo = 0;
+		}
 		*pipe = '\0';
 		buf = pipe + 1;
 	}
 	else{	
 		argvlist[*num][argc++] = buf;
+		if(apo){
+			if(apo==1){
+				delim = strchr(buf, '\'');
+			}
+			else if(apo==2){
+				delim = strchr(buf, '\"');
+			}
+			//*(delim-1) = '\0';
+			apo = 0;
+		}
 		*delim = '\0';
 		buf = delim + 1;
 	}
@@ -235,6 +261,8 @@ void parseline(char *buf, char **argv, char *argvlist[128][MAXARGS], int *num, i
 	if ((bg[*num] = (*argvlist[*num][argc-1] == '&')) != 0){
 		argvlist[*num][--argc] = NULL;
 	}
+
+
 
 
 /*
